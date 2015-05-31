@@ -1,0 +1,66 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+}
+
+<script type="text/javascript">
+    // clear this for now, need better way to manage
+    localStorage.removeItem('bearer');
+
+    function buttonClick() {
+        var bearerToken = getAccessToken();
+        callApi(bearerToken);
+    }
+
+    function getAccessToken() {
+        var currentToken = localStorage.getItem('bearer');
+        if (!currentToken) {
+            $.ajax({
+                url: "/Ajax/AccessToken",
+                async: false,
+                success: function (response) {
+                    localStorage.setItem('bearer', response);
+                    currentToken = response;
+                }
+            });
+        }
+
+        return currentToken;
+    }
+
+    function refreshAccessToken(callback) {
+        localStorage.removeItem('bearer');
+        var bearerToken = getAccessToken();
+        callback(bearerToken);
+    }
+
+    function callApi(bearerToken) {
+        $.ajax({
+            url: "https://localhost:44303/identity",
+            headers: {
+                "Authorization": "Bearer " + bearerToken
+            },
+            success: function (response) {
+                var $dlclaims = $('#dlclaims');
+                $dlclaims.empty();
+
+                $.each(response, function (i, c) {
+                    $dlclaims.append('<dt>' + c.type + '</dt><dd>' + c.value + '</dd>');
+                });
+            },
+            error: function (xhr, status, error) {
+                if (xhr.status == 401) {
+                    refreshAccessToken(this);
+                }
+            }
+        });
+    }
+</script>
+
+<h2>Ajax Test</h2>
+
+<input type="button" value="Call API" onclick="buttonClick();" />
+
+<dl id="dlclaims">
+</dl>
+
